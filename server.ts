@@ -45,6 +45,20 @@ app.prepare().then(() => {
       io.to(sessionId).emit('user joined', socket.id);
     });
 
+    socket.on('slide changed', (slide: any) => {
+      const room = Array.from(socket.rooms)[1];
+      if (room) {
+        io.to(room).emit('slide changed', slide);
+      }
+    });
+
+    socket.on('response', (response: any) => {
+      const room = Array.from(socket.rooms)[1];
+      if (room) {
+        io.to(room).emit('response', response);
+      }
+    });
+
     socket.on('disconnect', () => {
       console.log('A user disconnected:', socket.id);
     });
