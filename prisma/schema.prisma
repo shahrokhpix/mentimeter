@@ -1,0 +1,92 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                String         @id @default(cuid())
+  email             String         @unique
+  name              String?
+  password          String?
+  teamId            String?
+  role              Role           @default(presenter)
+  createdAt         DateTime       @default(now())
+  team              Team?          @relation(fields: [teamId], references: [id])
+  presentations     Presentation[] @relation("CreatedPresentations")
+  sessionsPresented Session[]      @relation("PresentedSessions")
+}
+
+model Team {
+  id            String         @id @default(cuid())
+  name          String
+  users         User[]
+  presentations Presentation[]
+}
+
+model Presentation {
+  id          String    @id @default(cuid())
+  teamId      String?
+  title       String
+  slides      Slide[]
+  createdBy   String
+  createdAt   DateTime  @default(now())
+  published   Boolean   @default(false)
+  team        Team?     @relation(fields: [teamId], references: [id])
+  creator     User      @relation("CreatedPresentations", fields: [createdBy], references: [id])
+  sessions    Session[]
+}
+
+model Slide {
+  id             String       @id @default(cuid())
+  presentationId String
+  order          Int
+  type           SlideType
+  content        Json
+  choices        Json?
+  correctAnswer  String?
+  presentation   Presentation @relation(fields: [presentationId], references: [id], onDelete: Cascade)
+  responses      Response[]
+}
+
+model Session {
+  id             String       @id @default(cuid())
+  presentationId String
+  presenterId    String
+  code           String       @unique
+  startedAt      DateTime?
+  endedAt        DateTime?
+  active         Boolean      @default(true)
+  presentation   Presentation @relation(fields: [presentationId], references: [id], onDelete: Cascade)
+  presenter      User         @relation("PresentedSessions", fields: [presenterId], references: [id])
+  responses      Response[]
+}
+
+model Response {
+  id        String   @id @default(cuid())
+  sessionId String
+  slideId   String
+  deviceId  String
+  payload   Json
+  createdAt DateTime @default(now())
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  slide     Slide    @relation(fields: [slideId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  admin
+  presenter
+  viewer
+}
+
+enum SlideType {
+  mc
+  open
+  scale
+  ranking
+  quiz
+  image
+}
