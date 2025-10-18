@@ -3,6 +3,7 @@ import { parse } from 'url';
 import next from 'next';
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
+import { parse as parseCookie } from 'cookie';
 
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
@@ -18,12 +19,19 @@ app.prepare().then(() => {
 
   const io = new Server(httpServer, {
     cors: {
-      origin: '*',
+      origin: 'http://localhost:3000',
+      credentials: true,
     },
   });
 
   io.use((socket, next) => {
-    const token = socket.handshake.auth.token;
+    const cookie = socket.handshake.headers.cookie;
+    if (!cookie) {
+      return next(new Error('Authentication error'));
+    }
+    const cookies = parseCookie(cookie);
+    const token = cookies.token;
+
     if (!token) {
       return next(new Error('Authentication error'));
     }
@@ -56,6 +64,9 @@ app.prepare().then(() => {
       const room = Array.from(socket.rooms)[1];
       if (room) {
         io.to(room).emit('response', response);
+        if (response.score > 0) {
+          io.to(room).emit('leaderboard updated');
+        }
       }
     });
 

@@ -2,11 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useSessionSocket } from '../../../hooks/useSessionSocket';
+import { useSessionSocket } from '../../../../hooks/useSessionSocket';
+import Leaderboard from '../../../../components/Leaderboard';
+import styles from './styles.module.css';
 
 type Slide = {
   id: string;
-  type: 'mc' | 'open';
+  type: 'mc' | 'open' | 'quiz' | 'ranking' | 'scale';
   content: string;
   choices?: { id: string; text: string }[];
 };
@@ -25,17 +27,10 @@ const PresenterPage = ({ params }: { params: { id: string } }) => {
   const [slides, setSlides] = useState<Slide[]>([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [responses, setResponses] = useState<Response[]>([]);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [token, setToken] = useState('');
 
-  useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    if (storedToken) {
-      setToken(storedToken);
-    }
-  }, []);
-
-  const { on, emit, connected } = useSessionSocket(sessionId || '', token);
+  const { on, emit, connected } = useSessionSocket(sessionId || '');
 
   useEffect(() => {
     if (connected) {
@@ -46,9 +41,7 @@ const PresenterPage = ({ params }: { params: { id: string } }) => {
   useEffect(() => {
     const fetchSlides = async () => {
       try {
-        const response = await fetch(`/api/presentations/${params.id}/slides`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await fetch(`/api/presentations/${params.id}/slides`);
         if (response.ok) {
           const data = await response.json();
           setSlides(data);
@@ -60,10 +53,8 @@ const PresenterPage = ({ params }: { params: { id: string } }) => {
         console.error('Failed to fetch slides:', error);
       }
     };
-    if (token) {
-      fetchSlides();
-    }
-  }, [params.id, token, emit]);
+    fetchSlides();
+  }, [params.id, emit]);
 
   useEffect(() => {
     const handleUserJoined = (userId: string) => {
@@ -88,6 +79,7 @@ const PresenterPage = ({ params }: { params: { id: string } }) => {
       const newIndex = currentSlideIndex + 1;
       setCurrentSlideIndex(newIndex);
       setResponses([]);
+      setShowLeaderboard(false);
       emit('slide changed', slides[newIndex]);
     }
   };
@@ -97,6 +89,7 @@ const PresenterPage = ({ params }: { params: { id: string } }) => {
       const newIndex = currentSlideIndex - 1;
       setCurrentSlideIndex(newIndex);
       setResponses([]);
+      setShowLeaderboard(false);
       emit('slide changed', slides[newIndex]);
     }
   };
@@ -111,28 +104,29 @@ const PresenterPage = ({ params }: { params: { id: string } }) => {
   );
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        textAlign: 'center',
-      }}
-    >
+    <div className={styles.container}>
       <h1>Presenting Presentation {params.id}</h1>
-      <div style={{ marginTop: '2rem' }}>
+      <div className={styles.joinCode}>
         <h2>Join with code:</h2>
-        <p style={{ fontSize: '2rem', fontWeight: 'bold', letterSpacing: '0.5rem' }}>
-          {joinCode}
-        </p>
+        <p>{joinCode}</p>
       </div>
-      <div style={{ marginTop: '2rem', border: '1px solid #ccc', padding: '2rem' }}>
-        {currentSlide ? (
+      <div className={styles.slideContainer}>
+        {showLeaderboard ? (
+          <Leaderboard sessionId={sessionId || ''} />
+        ) : currentSlide ? (
           <div>
             <h2>{currentSlide.content}</h2>
             {currentSlide.type === 'mc' && (
+              <ul>
+                {currentSlide.choices?.map((choice) => (
+                  <li key={choice.id}>
+                    {choice.text} (
+                    {slideResponses.filter((r) => r.payload.choice === choice.id).length})
+                  </li>
+                ))}
+              </ul>
+            )}
+            {currentSlide.type === 'quiz' && (
               <ul>
                 {currentSlide.choices?.map((choice) => (
                   <li key={choice.id}>
@@ -149,20 +143,29 @@ const PresenterPage = ({ params }: { params: { id: string } }) => {
                 ))}
               </ul>
             )}
+            {currentSlide.type === 'ranking' && (
+              <p>Ranking results will be shown here.</p>
+            )}
+            {currentSlide.type === 'scale' && (
+              <p>Scale results will be shown here.</p>
+            )}
           </div>
         ) : (
           <p>No slides in this presentation.</p>
         )}
       </div>
-      <div style={{ marginTop: '2rem' }}>
+      <div className={styles.controls}>
         <button onClick={handlePrevSlide} disabled={currentSlideIndex === 0}>
           Previous
+        </button>
+        <button onClick={() => setShowLeaderboard(!showLeaderboard)}>
+          {showLeaderboard ? 'Show Slide' : 'Show Leaderboard'}
         </button>
         <button onClick={handleNextSlide} disabled={currentSlideIndex === slides.length - 1}>
           Next
         </button>
       </div>
-      <div style={{ marginTop: '2rem' }}>
+      <div className={styles.users}>
         <h3>Joined Users:</h3>
         <ul>
           {joinedUsers.map((userId) => (

@@ -2,27 +2,21 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSessionSocket } from '../../../hooks/useSessionSocket';
+import styles from './styles.module.css';
+import Ranking from '../../../components/Ranking';
 
 type Slide = {
   id: string;
-  type: 'mc' | 'open';
+  type: 'mc' | 'open' | 'quiz' | 'ranking' | 'scale';
   content: string;
   choices?: { id: string; text: string }[];
 };
 
 const SessionPage = ({ params }: { params: { id:string } }) => {
-  const [token, setToken] = useState('');
   const [currentSlide, setCurrentSlide] = useState<Slide | null>(null);
   const [openTextResponse, setOpenTextResponse] = useState('');
 
-  useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    if (storedToken) {
-      setToken(storedToken);
-    }
-  }, []);
-
-  const { on, emit } = useSessionSocket(params.id, token);
+  const { on, emit } = useSessionSocket(params.id);
 
   useEffect(() => {
     const handleSlideChanged = (slide: Slide) => {
@@ -42,7 +36,6 @@ const SessionPage = ({ params }: { params: { id:string } }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           sessionId: params.id,
@@ -63,33 +56,18 @@ const SessionPage = ({ params }: { params: { id:string } }) => {
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        textAlign: 'center',
-      }}
-    >
+    <div className={styles.container}>
       <h1>Session {params.id}</h1>
       {currentSlide ? (
-        <div>
+        <div className={styles.slideContainer}>
           <h2>{currentSlide.content}</h2>
-          {currentSlide.type === 'mc' && (
+          {(currentSlide.type === 'mc' || currentSlide.type === 'quiz') && (
             <div style={{ marginTop: '2rem' }}>
               {currentSlide.choices?.map((choice) => (
                 <button
                   key={choice.id}
                   onClick={() => handleResponse({ choice: choice.id })}
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    padding: '1rem',
-                    margin: '0.5rem 0',
-                    fontSize: '1.2rem',
-                  }}
+                  className={styles.button}
                 >
                   {choice.text}
                 </button>
@@ -103,15 +81,28 @@ const SessionPage = ({ params }: { params: { id:string } }) => {
                 value={openTextResponse}
                 onChange={(e) => setOpenTextResponse(e.target.value)}
                 placeholder="Enter your answer"
-                style={{
-                  width: '100%',
-                  padding: '1rem',
-                  fontSize: '1.2rem',
-                }}
+                className={styles.input}
               />
               <button
                 onClick={() => handleResponse({ text: openTextResponse })}
-                style={{ marginTop: '1rem', padding: '0.5rem 1rem' }}
+                className={styles.submitButton}
+              >
+                Submit
+              </button>
+            </div>
+          )}
+          {currentSlide.type === 'ranking' && currentSlide.choices && (
+            <Ranking
+              choices={currentSlide.choices}
+              onRank={(rankedChoices) => handleResponse({ rankedChoices })}
+            />
+          )}
+          {currentSlide.type === 'scale' && (
+            <div style={{ marginTop: '2rem' }}>
+              <input type="range" min="1" max="5" />
+              <button
+                onClick={() => handleResponse({ value: 3 })} // Dummy value
+                className={styles.submitButton}
               >
                 Submit
               </button>

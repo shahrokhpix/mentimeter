@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
+import { parse } from 'cookie';
 
 export function withAuth(
   handler: (
@@ -12,7 +13,8 @@ export function withAuth(
     req: NextRequest,
     { params }: { params: { [key: string]: string | string[] } }
   ) => {
-    const token = req.headers.get('authorization')?.split(' ')[1];
+    const cookies = parse(req.headers.get('cookie') || '');
+    const token = cookies.token;
 
     if (!token) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });

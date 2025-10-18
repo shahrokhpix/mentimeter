@@ -13,6 +13,38 @@ export const POST = withAuth(async (req, userId) => {
       );
     }
 
+    const slide = await db.slide.findUnique({ where: { id: slideId } });
+    if (!slide) {
+      return NextResponse.json({ message: 'Slide not found' }, { status: 404 });
+    }
+
+    let score = 0;
+    if (slide.type === 'quiz' && slide.correctAnswer) {
+      const choice = (slide.choices as any[]).find(c => c.id === payload.choice);
+      if (choice && choice.text === slide.correctAnswer) {
+        score = 10; // Award 10 points for a correct answer
+      }
+    }
+
+    if (score > 0) {
+      const leaderboard = await db.leaderboard.findUnique({ where: { sessionId } });
+      if (leaderboard) {
+        const scores = leaderboard.scores as { [key: string]: number };
+        scores[userId] = (scores[userId] || 0) + score;
+        await db.leaderboard.update({
+          where: { sessionId },
+          data: { scores },
+        });
+      } else {
+        await db.leaderboard.create({
+          data: {
+            sessionId,
+            scores: { [userId]: score },
+          },
+        });
+      }
+    }
+
     const response = await db.response.create({
       data: {
         sessionId,

@@ -89,4 +89,13 @@ enum SlideType {
   ranking
   quiz
   image
+  leaderboard
+}
+
+model Leaderboard {
+  id        String   @id @default(cuid())
+  sessionId String   @unique
+  scores    Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

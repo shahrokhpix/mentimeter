@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '../../../../lib/db';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { serialize } from 'cookie';
 
 export async function POST(request: Request) {
   try {
@@ -37,7 +38,17 @@ export async function POST(request: Request) {
       expiresIn: '1h',
     });
 
-    return NextResponse.json({ token });
+    const cookie = serialize('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== 'development',
+      sameSite: 'strict',
+      maxAge: 3600,
+      path: '/',
+    });
+
+    const response = NextResponse.json({ message: 'Login successful' });
+    response.headers.set('Set-Cookie', cookie);
+    return response;
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(

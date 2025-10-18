@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import styles from './styles.module.css';
 
 type Presentation = {
   id: string;
@@ -17,10 +18,7 @@ const PresentationsPage = () => {
   useEffect(() => {
     const fetchPresentations = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/presentations', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await fetch('/api/presentations');
         if (response.ok) {
           const data = await response.json();
           setPresentations(data);
@@ -40,12 +38,10 @@ const PresentationsPage = () => {
     if (!newPresentationTitle.trim()) return;
 
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch('/api/presentations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ title: newPresentationTitle }),
       });
@@ -64,10 +60,8 @@ const PresentationsPage = () => {
 
   const handleStartPresentation = async (presentationId: string) => {
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`/api/presentations/${presentationId}/start`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.ok) {
@@ -82,37 +76,30 @@ const PresentationsPage = () => {
   };
 
   return (
-    <div style={{ padding: '2rem' }}>
+    <div className={styles.container}>
       <h1>My Presentations</h1>
-      <form onSubmit={handleCreatePresentation} style={{ margin: '2rem 0' }}>
+      <form onSubmit={handleCreatePresentation} className={styles.form}>
         <input
           type="text"
           value={newPresentationTitle}
           onChange={(e) => setNewPresentationTitle(e.target.value)}
           placeholder="Enter new presentation title"
-          style={{ padding: '0.5rem', marginRight: '1rem' }}
+          className={styles.input}
         />
-        <button type="submit" style={{ padding: '0.5rem 1rem' }}>
+        <button type="submit" className={styles.button}>
           Create Presentation
         </button>
       </form>
-      <ul style={{ listStyle: 'none', padding: 0 }}>
+      <ul className={styles.list}>
         {presentations.map((p) => (
           <li
             key={p.id}
-            style={{
-              padding: '1rem',
-              border: '1px solid #ccc',
-              marginBottom: '1rem',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
+            className={styles.listItem}
           >
             <span>{p.title}</span>
             <button
               onClick={() => handleStartPresentation(p.id)}
-              style={{ padding: '0.5rem 1rem' }}
+              className={styles.button}
             >
               Present
             </button>

@@ -18,8 +18,6 @@ const LoginPage = () => {
       });
 
       if (response.ok) {
-        const { token } = await response.json();
-        localStorage.setItem('token', token);
         router.push('/presentations');
       } else {
         console.error('Login failed');
